@@ -1,0 +1,6 @@
+[submodule "spikes"]
+	path = spikes
+	url = https://github.com/cortex-lab/spikes
+[submodule "steinmetz-et-al-2019"]
+	path = steinmetz-et-al-2019
+	url = https://github.com/nsteinme/steinmetz-et-al-2019
