@@ -7,10 +7,10 @@ spike_clusters = readNPY(path);
 
 path = "allData/Cori_2016-12-14/channels.brainLocation.tsv";
 positions = readtable(path, 'FileType', 'text', 'Delimiter', '\t');
-positions = table2array(positions(:, 1:3));
+%positions = table2array(positions(:, 1:3));
 
-path = "allData/Cori_2016-12-14/clusters.probes.npy";
-probes = readNPY(path);
+path = "allData/Cori_2016-12-14/clusters.depths.npy";
+depths = readNPY(path);
 
 % filter by phy annotation: >= 2 is good
 path = "allData/Cori_2016-12-14/clusters._phy_annotation.npy";
@@ -45,6 +45,6 @@ Structure:
         
     
 %}
-
+%binaryBinnedSpikeCell = cellfun(@(x) arrayfun(@(a) a > 0, x, 'UniformOutput',false), binnedSpikeTimesCell, 'UniformOutput',false)
 
 

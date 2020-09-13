@@ -7,9 +7,10 @@ function corrCoeffMatrix = getBinSpikesCorrCoeffs(binnedSpikeCell)
             if isempty(oneNeuron) || isempty(otherNeuron)
                 continue
             end
-                corrVal = corrcoef(binnedSpikeCell{neuron}, otherNeuron(1:length(oneNeuron)));
+                corrVal = corrcoef(double(binnedSpikeCell{neuron}), double(otherNeuron(1:length(oneNeuron))));
                 corrCoeffMatrix(neuron, compNeuron) = corrVal(1,2);
         end    
     end
+    %corrCoeffMatrix = corrCoeffMatrix(~isnan(corrCoeffMatrix));
 end
 
