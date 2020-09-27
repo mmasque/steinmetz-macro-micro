@@ -2,7 +2,6 @@ function allCounts = spikeTimeBinning(spikeTimesCell, binWidth)
     %{
         Counts spikes in each bin
         - binWidth: in seconds 
-        - scrollByWidth: in seconds: how much to slide the window 
     %}
     [~, columns] = size(spikeTimesCell); % Get size of cell array
     allMin = Inf;
