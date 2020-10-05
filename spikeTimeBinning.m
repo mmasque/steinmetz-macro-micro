@@ -23,7 +23,7 @@ function allCounts = spikeTimeBinning(spikeTimesCell, binWidth)
     
     for col = 1 : columns
         theseTimes = spikeTimesCell{1, col};
-        allCounts{col} = histcounts(theseTimes, edges);
+        allCounts{col} = (histcounts(theseTimes, edges));
     end
      
 end

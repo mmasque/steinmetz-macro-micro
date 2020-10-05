@@ -3,3 +3,7 @@ figures/*
 matlab.mat
 *.m~
 *.zip
+/results
+/tpms
+__pycache__/
+pyphi.log

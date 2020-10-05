@@ -5,6 +5,6 @@ function binarySpikes = spikeTimesToBinary(binnedSpikeTimesCell)
         if isempty(curr)
             continue
         end
-        binarySpikes{c} = curr > 0;
+        binarySpikes{c} = (curr > 0);
     end
 end
