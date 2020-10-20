@@ -1,6 +1,6 @@
 %% constants
 PATH = "allData/Cori_2016-12-14";
-BINWIDTH = 0.001;
+BINWIDTH = 0.005;
 PROBE = 1;
 
 %% data
@@ -15,20 +15,20 @@ probeTimes = times(probeClusterIndices);
 probeDepths = depths(probeIndices);
 %% reformat the spikes and clusters data
 spikeTimesCell = reformatSpikeTimes(probeIndices, probeTimes, probeClusters);
-binnedSpikeTimesCell_10ms = spikeTimeBinning(spikeTimesCell, 0.01);
+binnedSpikeTimesCell_5ms = spikeTimeBinning(spikeTimesCell, BINWIDTH);
 %% get binary bins (spike or no spike within window)
-binarySpikeTimesCell_10ms = spikeTimesToBinary(binnedSpikeTimesCell_10ms);
+binarySpikeTimesCell_5ms = spikeTimesToBinary(binnedSpikeTimesCell_5ms);
 %% in matrix form
 binarySpikeTimesMatrix = cell2mat(binnedSpikeTimesCell')';
 %% get the correlation matrix
-corrCoeffMatrix = getBinSpikesCorrCoeffs(binnedSpikeTimesCell_10ms(probeIndices));
+corrCoeffMatrix = getBinSpikesCorrCoeffs(binnedSpikeTimesCell_5ms(probeIndices));
 %%
 noNanCorrCoeffMatrix = corrCoeffMatrix(probeIndices, probeIndices);
 %% get neuron group to analyse by depth
 depthRangeProbeIndices = getClustersByDepthRange(0,3.7535e+03,probeDepths, probeIndices);
 % depthRangeCorrCoeffMatrix = corrCoeffMatrix(depthRangeProbeIndices, depthRangeProbeIndices);
 %% get frequency of simultaneous spikes
-simSpikesMat = allSimSpikes(binnedSpikeTimesCell_10ms(probeIndices));
+simSpikesMat = allSimSpikes(binnedSpikeTimesCell_5ms(probeIndices));
 %% get the binarySpikeTimesCell with only probeIndices
 binnedSpikeTimesCellProbeIndices = binnedSpikeTimesCell(probeIndices);
 %% binarise the probe indices
@@ -69,64 +69,99 @@ for ind = ccindices'
 end
 
 %% get TPMs of connected neurons
-conns = randomNeuronPairs(1:9, :);
+conns = goodConnections(1:9, :);
 nValues = 2;
 nStates = 2;
-N_SAMPLES = 500;
+N_SAMPLES = 1000;
 TAU = 1;
-PATH = "tpms/TPM_CORI_2016_12_14_PROBE1_randomNeuronPairs_randsample_1msbin";
+PATH = "tpms/TPM_CORI_2016_12_14_PROBE1_DEPSHUFFLE_TESTgoodConnections_randsample_10msbin_10x_diffsamples";
+REPETITIONS = 10;
 mkdir(PATH);
-tpms = zeros(size(conns,2)^nValues, size(conns,2)^nValues, size(conns,1));
-state_obs = zeros(size(conns,2)^nValues, size(conns,1));
-for i = 1:length(conns)
-    tpm_data = [binarySpikeTimesCellProbeIndices{conns(i,1)}; binarySpikeTimesCellProbeIndices{conns(i,2)}]';
-    [tpm, state_counters] = build_tpm_equalStates_randomsampling(tpm_data, TAU, nValues, N_SAMPLES);
-    tpms(:,:,i) = tpm;
-    neurons = [conns(i,1), conns(i,2)];
-    saveto = fullfile(PATH,strcat("TPM_n", string(conns(i,1)), "_n", string(conns(i,2))));
-    
-    save(saveto,"tpm", "state_counters", "nValues", "neurons");
-    
-    state_obs(:, i) = countOccurrences(tpm_data, nValues, nStates);
-end
+%tpms = zeros(size(conns,2)^nValues, size(conns,2)^nValues, size(conns,1), REPETITIONS);
+%state_obs = zeros(size(conns,2)^nValues, size(conns,1), REPETITIONS);
+for samp = 200:200:1000
+for j = 1:REPETITIONS
+        for i = 1:length(conns)
+            tpm_data = [shuffleInTime(binarySpikeTimesCellProbeIndices_10ms{goodConnections(i,1)}, true); shuffleInTime(binarySpikeTimesCellProbeIndices_10ms{(goodConnections(i,2))}, true)]';
+            [tpm, state_counters] = build_tpm_equalStates_randomsampling(tpm_data, TAU, nValues, samp);
+            %tpms(:,:,i, j) = tpm;
+            neurons = [goodConnections(i,1), goodConnections(i,2)];
+            saveto = fullfile(PATH,strcat("TPM_n", string(goodConnections(i,1)), "_n", string(goodConnections(i,2)), "_samp", string(samp), "_rep", string(j)));
 
+            save(saveto,"tpm", "state_counters", "nValues", "neurons");
+            
+            %state_obs(:, i, j) = countOccurrences(tpm_data, nValues, nStates);
+        end
+end
+end
 %% after running IIT in python, recover the phi values from results/split
-PATH = "results/split/TPM_CORI_2016_12_14_PROBE1_randomNeuronPairs_randsample_1msbin";
-conns = randomNeuronPairs(1:9, :);
-phis = zeros(1,length(conns)*2);
-ticklabels = strings(1,length(conns)*2);
+PATH = "results/split/TPM_CORI_2016_12_14_PROBE1_goodConnections_randsample_10msbin_10x_diffsamples";
+conns = goodConnections(1:9, :);
+good_phis_10 = zeros(length(conns), REPETITIONS, 5);
+ticklabels_good = strings(1,length(conns));
+for k = 1:5
+for j = 1:10
 for i = 1:length(conns)
-    fname = fullfile(PATH,strcat("TPM_n", string(conns(i,1)), "_n", string(conns(i,2))));
+    fname = fullfile(PATH,strcat("TPM_n", string(conns(i,1)), "_n", string(conns(i,2)), "_samp",string(k*200), "_rep", string(j), ".mat"));
     load(fname);
-    phis(i) = phi.phi;
-    ticklabels(i) = strcat(string(conns(i,1)), ", ", string(conns(i,2)));
+    good_phis_10(i,j, k) = phi.phi;
+    ticklabels_good(i) = strcat(string(conns(i,1)), ", ", string(conns(i,2)));
 end
-
-PATH = "results/split/TPM_CORI_2016_12_14_PROBE1_Manual_network_pairs_randsample_1msbin";
-conns = goodConnections;
+end
+end
+PATH = "results/split/TPM_CORI_2016_12_14_PROBE1_DEPSHUFFLE_TESTgoodConnections_randsample_10msbin_10x_diffsamples";
+conns = goodConnections(1:9, :);
+random_phis_10 = zeros(length(conns), REPETITIONS, 5);
+ticklabels_random = strings(1,length(conns));
+for k = 1:5
+for j = 1:10
 for i = 1:length(conns)
-    fname = fullfile(PATH,strcat("TPM_n", string(conns(i,1)), "_n", string(conns(i,2))));
+    fname = fullfile(PATH,strcat("TPM_n", string(conns(i,1)), "_n", string(conns(i,2)),"_samp",string(k*200), "_rep", string(j), ".mat"));
     load(fname);
-    phis(i + length(conns)) = phi.phi;
-    ticklabels(i + length(conns)) = strcat(string(conns(i,1)), ", ", string(conns(i,2)));
+    random_phis_10(i, j, k) = phi.phi;
+    ticklabels_random(i) = strcat(string(conns(i,1)), ", ", string(conns(i,2)));
 end
+end
+end
+%%
 
-colors = zeros(length(phis), 3);
-colors(1:length(conns), :) = ones(length(conns), 3) .*  [1 0 0];
-colors(1+length(conns):length(phis), :) = ones(length(conns), 3) .*[0 0 1];
 figure;
-scatter(1:length(phis), phis, 80, colors, 'filled');
-xticks(1:length(phis));
-xticklabels(ticklabels);
-xtickangle(90);
-xlabel("Neuron pairs")
-ylabel("{\Phi}")
-set(gca,'FontSize',15)
-title("Phi values of connected neuron pairs vs. randomly selected neuron pairs");
-% add correct legend label (hacky)
-hold on; scatter([], [], 'blue', 'filled');hold off
-legend(["Random pairs", "Connected neurons"]);
+s1 = subplot(1,2,1); 
+   
+    hold on
+    errorbar(squeeze(mean(good_phis_5(:, :, 5),2)), squeeze(std(good_phis_5(:, :, 5),0,2)), 'o', 'LineWidth', 2);
+    errorbar(squeeze(mean(good_phis_10(:, :, 5),2)), squeeze(std(good_phis_10(:, :, 5),0,2)), 'o', 'LineWidth', 2);
+    hold off
+    %hold on
+    %boxplot(good_phis_10(:, :, 5)')
+    %errorbar(squeeze(mean(good_phis_5(:, :, 5),2)), squeeze(std(good_phis_5(:, :, 5),0,2)), 'o', 'LineWidth', 2);
 
+    xticks(1:length(good_phis));
+    xticklabels(ticklabels_good);
+    xtickangle(90);
+    xlabel("Neuron pairs")
+    ylabel("{\Phi}")
+    set(gca,'FontSize',15)
+    title({'Connected Neurons', 'randomly selected 1000 transitions/state for TPM', '10 iterations'});
+
+s2 = subplot(1,2,2); 
+
+    hold on
+    errorbar(squeeze(mean(random_phis_5(:, :, 5),2)), squeeze(std(random_phis_5(:, :, 5),0,2)), 'o', 'LineWidth', 2);
+    errorbar(squeeze(mean(random_phis_10(:, :, 5),2)), squeeze(std(random_phis_10(:, :, 5),0,2)), 'o', 'LineWidth', 2);
+    hold off
+    %boxplot(random_phis_10(:, :, 5)')
+    %errorbar(squeeze(mean(random_phis_5(:, :, 5),2)), squeeze(std(random_phis_5(:, :, 5),0,2)), 'o', 'LineWidth', 2);
+
+    xticks(1:length(random_phis));
+    xticklabels(ticklabels_random);
+    xtickangle(90);
+    xlabel("Neuron pairs")
+    ylabel("{\Phi}")
+    set(gca,'FontSize',15)
+    title({'Independently Time shuffled Conn Neurons', 'randomly selected 1000 transitions for TPM', '10 iterations'});
+
+%linkaxes([s1, s2], 'y');
 %% get some neuron pairs that are at a similar distance to the mean distance between connected pairs. 
 
 % compute mean distance between connected pairs
@@ -149,7 +184,7 @@ while size(randomNeuronPairs, 1) < length(goodConnections)
     
     i = r(rindex);
     pairDistance = abs(probeDepths(connectedNeurons(i, 1)) - probeDepths(connectedNeurons(i, 2)));
-    if pairDistance < meanDistance + maxDistance && ~ismember([connectedNeurons(i, 1) connectedNeurons(i, 2)], goodConnections, "rows") && ~(connectedNeurons(i, 1) == connectedNeurons(i, 2))
+    if pairDistance < maxDistance && ~ismember([connectedNeurons(i, 1) connectedNeurons(i, 2)], goodConnections, "rows") && ~(connectedNeurons(i, 1) == connectedNeurons(i, 2))
         randomNeuronPairs = [randomNeuronPairs; [connectedNeurons(i, 1) connectedNeurons(i, 2)]];
     end
     rindex = rindex + 1;

@@ -17,7 +17,9 @@ def phi_compute(tpm, state_counters, nValues, out_dir, out_file):
 	#	nValues = number of states each element can take
 	#	out_dir = string; directory to output results file
 	#	out_name = string; name of output files
-	
+	if os.path.exists(out_dir+out_file):
+		return
+
 	# Build pyphi network
 	network = pyphi.Network(tpm)
 	# Determine number of system elements
@@ -62,7 +64,7 @@ def phi_compute(tpm, state_counters, nValues, out_dir, out_file):
 		# Store big_mip
 		big_mips[state_index] = big_mip_json
 		
-		print('State ' + str(state_index) + ' Phi=' + str(big_mip.phi))
+		#print('State ' + str(state_index) + ' Phi=' + str(big_mip.phi))
 		#print(big_mip)
 
 	phi_total = 0
@@ -73,16 +75,16 @@ def phi_compute(tpm, state_counters, nValues, out_dir, out_file):
 	phi_value = phi_total / np.sum(state_counters)
 
 	phi['phi'] = phi_value
-	"""
+	
 	phi['state_counters'] = state_counters
 	phi['big_mips'] = big_mips
 	phi['state_phis'] = state_phis
 	phi['tpm'] = tpm
 	phi['mips'] = mips
-	"""
+	
 	# Save
 	save_mat(out_dir+out_file, {'phi': phi})
-	print('saved ' + out_dir + out_file)
+	#print('saved ' + out_dir + out_file)
 
 # Setup ############################################################################
 
